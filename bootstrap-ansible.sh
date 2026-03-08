@@ -90,6 +90,53 @@ check_root() {
     fi
 }
 
+prompt_password_change() {
+    log_step "Security Check: Root Password"
+
+    # Check if we're likely using a default password from preseed
+    echo ""
+    echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
+    echo -e "${YELLOW}⚠️  SECURITY WARNING: Default Password Detected${NC}"
+    echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo "If this server was installed using the public preseed files,"
+    echo "the root password is currently the PUBLIC default: 'debian123'"
+    echo ""
+    echo "This password is KNOWN TO EVERYONE on the internet!"
+    echo ""
+
+    # Ask if user wants to change password now
+    read -p "Do you want to change the root password NOW? (STRONGLY RECOMMENDED) [Y/n]: " -r REPLY
+    echo ""
+
+    # Default to Yes if user just presses enter
+    REPLY=${REPLY:-Y}
+
+    if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+        log_info "Changing root password..."
+        echo ""
+
+        # Use passwd command to change password interactively
+        if passwd root; then
+            echo ""
+            log_info "✅ Root password changed successfully!"
+            echo ""
+            sleep 2
+        else
+            echo ""
+            log_error "Failed to change password!"
+            log_warn "You should change it manually after bootstrap completes."
+            echo ""
+            sleep 2
+        fi
+    else
+        log_warn "Skipping password change."
+        log_warn "⚠️  Remember to change the root password IMMEDIATELY after bootstrap!"
+        echo ""
+        sleep 3
+    fi
+}
+
 detect_os() {
     if [[ -f /etc/os-release ]]; then
         . /etc/os-release
@@ -569,6 +616,12 @@ print_summary() {
     echo "  Docker:             $(if [[ "$INSTALL_DOCKER" == "true" ]]; then echo "✓ Installed"; else echo "✗ Not installed"; fi)"
     echo "  Monitoring:         $(if [[ "$INSTALL_MONITORING" == "true" ]]; then echo "✓ Installed"; else echo "✗ Not installed"; fi)"
     echo ""
+
+    # Security reminder
+    echo -e "${YELLOW}🔒 Security Reminder:${NC}"
+    echo "  If you skipped the password change, do it NOW:"
+    echo "  passwd"
+    echo ""
     echo "Next steps:"
     echo ""
     echo "  1. Test SSH access:"
@@ -634,6 +687,7 @@ main() {
     echo ""
 
     check_root
+    prompt_password_change
     detect_os
     detect_virtualization
     cleanup_apt_repos
