@@ -93,47 +93,70 @@ check_root() {
 prompt_password_change() {
     log_step "Security Check: Root Password"
 
-    # Check if we're likely using a default password from preseed
-    echo ""
-    echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
-    echo -e "${YELLOW}⚠️  SECURITY WARNING: Default Password Detected${NC}"
-    echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
-    echo ""
-    echo "If this server was installed using the public preseed files,"
-    echo "the root password is currently the PUBLIC default: 'debian123'"
-    echo ""
-    echo "This password is KNOWN TO EVERYONE on the internet!"
-    echo ""
-
-    # Ask if user wants to change password now
-    read -p "Do you want to change the root password NOW? (STRONGLY RECOMMENDED) [Y/n]: " -r REPLY
-    echo ""
-
-    # Default to Yes if user just presses enter
-    REPLY=${REPLY:-Y}
-
-    if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
-        log_info "Changing root password..."
+    # Check if we're running interactively (not via curl | bash)
+    if [ -t 0 ]; then
+        # Interactive mode - can ask questions
+        echo ""
+        echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
+        echo -e "${YELLOW}⚠️  SECURITY WARNING: Default Password Detected${NC}"
+        echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
+        echo ""
+        echo "If this server was installed using the public preseed files,"
+        echo "the root password is currently the PUBLIC default: 'debian123'"
+        echo ""
+        echo "This password is KNOWN TO EVERYONE on the internet!"
         echo ""
 
-        # Use passwd command to change password interactively
-        if passwd root; then
+        # Ask if user wants to change password now
+        read -p "Do you want to change the root password NOW? (STRONGLY RECOMMENDED) [Y/n]: " -r REPLY </dev/tty
+        echo ""
+
+        # Default to Yes if user just presses enter
+        REPLY=${REPLY:-Y}
+
+        if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+            log_info "Changing root password..."
             echo ""
-            log_info "✅ Root password changed successfully!"
-            echo ""
-            sleep 2
+
+            # Use passwd command to change password interactively
+            if passwd root </dev/tty; then
+                echo ""
+                log_info "✅ Root password changed successfully!"
+                echo ""
+                sleep 2
+            else
+                echo ""
+                log_error "Failed to change password!"
+                log_warn "You should change it manually after bootstrap completes."
+                echo ""
+                sleep 2
+            fi
         else
+            log_warn "Skipping password change."
+            log_warn "⚠️  Remember to change the root password IMMEDIATELY after bootstrap!"
             echo ""
-            log_error "Failed to change password!"
-            log_warn "You should change it manually after bootstrap completes."
-            echo ""
-            sleep 2
+            sleep 3
         fi
     else
-        log_warn "Skipping password change."
-        log_warn "⚠️  Remember to change the root password IMMEDIATELY after bootstrap!"
+        # Non-interactive mode (curl | bash) - just show warning
         echo ""
-        sleep 3
+        echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
+        echo -e "${YELLOW}⚠️  CRITICAL: Change Root Password NOW!${NC}"
+        echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
+        echo ""
+        echo "STOP! This script was run non-interactively (curl | bash)."
+        echo ""
+        echo "If this server was installed with the public preseed files,"
+        echo "the root password is 'debian123' - KNOWN TO EVERYONE!"
+        echo ""
+        echo -e "${RED}You MUST change the password before continuing!${NC}"
+        echo ""
+        echo "Run this command NOW:"
+        echo ""
+        echo -e "${GREEN}  passwd${NC}"
+        echo ""
+        read -p "Press ENTER after you have changed the root password... "
+        echo ""
     fi
 }
 
