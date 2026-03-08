@@ -138,25 +138,41 @@ prompt_password_change() {
             sleep 3
         fi
     else
-        # Non-interactive mode (curl | bash) - just show warning
+        # Non-interactive mode (curl | bash) - pause and give instructions
         echo ""
         echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
         echo -e "${YELLOW}⚠️  CRITICAL: Change Root Password NOW!${NC}"
         echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
         echo ""
-        echo "STOP! This script was run non-interactively (curl | bash)."
-        echo ""
         echo "If this server was installed with the public preseed files,"
-        echo "the root password is 'debian123' - KNOWN TO EVERYONE!"
+        echo "the root password is currently 'debian123' - KNOWN TO EVERYONE!"
         echo ""
-        echo -e "${RED}You MUST change the password before continuing!${NC}"
+        echo -e "${RED}Bootstrap will PAUSE for 60 seconds.${NC}"
+        echo -e "${RED}Use this time to change the password!${NC}"
         echo ""
-        echo "Run this command NOW:"
+        echo "In a separate terminal window, run:"
         echo ""
+        echo -e "${GREEN}  ssh root@$(hostname -I | awk '{print $1}')${NC}"
         echo -e "${GREEN}  passwd${NC}"
         echo ""
-        read -p "Press ENTER after you have changed the root password... "
+        echo "Or if you're already logged in here:"
+        echo -e "${GREEN}  Press Ctrl+Z to suspend this script${NC}"
+        echo -e "${GREEN}  Run: passwd${NC}"
+        echo -e "${GREEN}  Then: fg (to resume this script)${NC}"
         echo ""
+
+        local countdown=60
+        while [ $countdown -gt 0 ]; do
+            echo -ne "\rContinuing in ${countdown} seconds (or press ENTER to continue now)...   "
+            read -t 1 && break
+            ((countdown--))
+        done
+        echo ""
+        echo ""
+        log_warn "Continuing bootstrap..."
+        log_warn "⚠️  If you didn't change the password, do it IMMEDIATELY after bootstrap!"
+        echo ""
+        sleep 2
     fi
 }
 
